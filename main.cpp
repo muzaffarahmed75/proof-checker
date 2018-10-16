@@ -106,27 +106,31 @@ Node* postfix_to_parsetree(string postfix)
     return st.top();
 }
 
-void print_parsetree(Node* root)
+string parsetree_to_infix(Node* root)
 {
+    string infix = "";
     if(root == NULL)
-        return;
+        return infix;
     char token = root -> data;
     if(operator_type(token) == BINARY)
-        printf("(");
-    print_parsetree(root -> left);
-    printf("%c", token);
-    print_parsetree(root -> right);
+        infix += LEFT;
+    infix += parsetree_to_infix(root -> left);
+    infix += token;
+    infix += parsetree_to_infix(root -> right);
     if(operator_type(token) == BINARY)
-        printf(")");
+        infix += RIGHT;
+    return infix;
 }
 
 int main()
 {
-    string s, p;
-    cin >> s;
-    p = infix_to_postfix(s);
-    cout << p << endl;
-    Node* root = postfix_to_parsetree(p);
-    print_parsetree(root);
+    string infix, postfix;
+    Node* tree;
+    cin >> infix;
+    postfix = infix_to_postfix(infix);
+    cout << postfix << endl;
+    tree = postfix_to_parsetree(postfix);
+    infix = parsetree_to_infix(tree);
+    cout << infix;
     return 0;
 }
