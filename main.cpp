@@ -156,17 +156,23 @@ Line input_line(int line_number)
     string in;
     cout << line_number+1 << " ";
     getline(cin, in);
-    string::iterator c = in.begin() - 1;
-    for(++c; c != in.end() and *c != '/'; ++c)
+    string::iterator c = in.begin();
+    for(; c != in.end() and *c != '/'; ++c)
         if(*c != ' ')
             line.statement += *c;
-    for(++c; c != in.end() and *c != '/'; ++c)
+    if(c != in.end())
+        c++;
+    for(; c != in.end() and *c != '/'; ++c)
         if(*c != ' ')
             line.rule += *c;
-    for(++c; c != in.end() and *c != '/'; ++c)
+    if(c != in.end())
+        c++;
+    for(; c != in.end() and *c != '/'; ++c)
         if(*c != ' ')
-            line.line1 = 10 * line.line1 + (int)(*c - 48);
-    for(++c; c != in.end() and *c != '/'; ++c)
+            line.line1 = 10 * line.line1 + *c - '0';
+    if(c != in.end())
+        c++;
+    for(; c != in.end() and *c != '/'; ++c)
         if(*c != ' ')
             line.line2 = 10 * line.line2 + *c - '0';
     return line;
@@ -176,7 +182,7 @@ vector<Line> input_proof(int n)
 {
     vector<Line> proof;
     for(int i = 0; i < n; i++)
-        proof.push_back(input_line(i));
+        proof.emplace_back(input_line(i));
     return proof;
 }
 
