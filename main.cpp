@@ -8,6 +8,7 @@
 #define OR 'V'
 #define NEG '~'
 #define IMPL '>'
+#define NONE 0
 #define UNARY 1
 #define BINARY 2
 #define PREMISE "P"
@@ -18,6 +19,9 @@
 #define OR_INTRO_2 "Vi2"
 #define IMPL_ELIM ">e"
 #define MOD_TOL "MT"
+#define OK 0
+#define INVALID_RULE 1
+#define INVALID_LINE 2
 
 using namespace std;
 
@@ -43,6 +47,7 @@ struct Line
     }
 };
 
+/** returns the type of an operator (unary, binary, or not an operator) */
 int operator_type(char token)
 {
     switch(token)
@@ -56,9 +61,10 @@ int operator_type(char token)
         case IMPL:
             return BINARY;
     }
-    return 0;
+    return NONE;
 }
 
+/** converts an infix expression to postfix */
 string infix_to_postfix(string infix)
 {
     string postfix;
@@ -69,7 +75,7 @@ string infix_to_postfix(string infix)
             st.push(token);
         else
             postfix += token;
-        if(operator_type(token) == UNARY)       // NEG
+        if(operator_type(token) == UNARY)
             continue;
         if(!st.empty() and operator_type(st.top()) == UNARY)
         {
@@ -150,11 +156,44 @@ parsetree infix_to_parsetree(string infix)
     return postfix_to_parsetree(infix_to_postfix(infix));
 }
 
+string parsetree_to_postfix(parsetree tree)
+{
+    return infix_to_postfix(parsetree_to_infix(tree));
+}
+
+int check_line(Line line, int line_no)
+{
+    if(line.rule == PREMISE)
+    {
+        if(line.line1 or line.line2)
+            return INVALID_LINE;
+    }
+    else if(line.rule == AND_INTRO or line.rule == IMPL_ELIM
+        or line.rule == MOD_TOL)
+    {
+        if(line.line1 < 1 or line.line1 >= line_no)
+            return INVALID_LINE;
+        if(line.line2 < 1 or line.line2 >= line_no)
+            return INVALID_LINE;
+    }
+    else if(line.rule == AND_ELIM_1 or line.rule == AND_ELIM_2
+        or line.rule == OR_INTRO_1 or line.rule == OR_INTRO_2)
+    {
+        if(line.line1 < 1 or line.line1 >= line_no)
+            return INVALID_LINE;
+        if(line.line2)
+            return INVALID_LINE;
+    }
+    else
+        return INVALID_RULE;
+    return OK;
+}
+
 Line input_line(int line_number)
 {
     Line line = Line();
     string in;
-    cout << line_number+1 << " ";
+    cout << line_number << " ";
     getline(cin, in);
     string::iterator c = in.begin();
     for(; c != in.end() and *c != '/'; ++c)
@@ -168,32 +207,50 @@ Line input_line(int line_number)
     if(c != in.end())
         c++;
     for(; c != in.end() and *c != '/'; ++c)
+    {
         if(*c != ' ')
             line.line1 = 10 * line.line1 + *c - '0';
+        if(*c < '0' or *c > '9')
+            line.line1 = -1;
+    }
     if(c != in.end())
         c++;
     for(; c != in.end() and *c != '/'; ++c)
+    {
         if(*c != ' ')
             line.line2 = 10 * line.line2 + *c - '0';
+        if(*c < '0' or *c > '9')
+            line.line2 = -1;
+    }
     return line;
 }
 
 vector<Line> input_proof(int n)
 {
     vector<Line> proof;
-    for(int i = 0; i < n; i++)
-        proof.emplace_back(input_line(i));
+    for(int i = 1; i <= n; i++)
+    {
+        Line line;
+        while(true)
+        {
+            line = input_line(i);
+            int res = check_line(line, i);
+            if(res == OK)
+                break;
+            else if(res == INVALID_RULE)
+                cerr << "Invalid proof rule." << endl;
+            else if(res == INVALID_LINE)
+                cerr << "Invalid line number(s)." << endl;
+        }
+        proof.emplace_back(line);
+    }
     return proof;
 }
 
 bool check_proof(vector<Line> proof)
 {
-    int cur_line_no = 0;
     for(auto line: proof)
     {
-        cur_line_no++;
-        if(line.line1 >= cur_line_no or line.line2 >= cur_line_no)
-            return false;
         if(line.rule == PREMISE);
         else if(line.rule == AND_INTRO)
         {
@@ -272,8 +329,8 @@ bool check_proof(vector<Line> proof)
                 return false;
             cur_tree = cur_tree -> right;
             ref_tree = ref_tree -> right;
-            string cur_postfix = infix_to_postfix(parsetree_to_infix(cur_tree));
-            string ref_postfix = infix_to_postfix(parsetree_to_infix(ref_tree));
+            string cur_postfix = parsetree_to_postfix(cur_tree);
+            string ref_postfix = parsetree_to_postfix(ref_tree);
             string orig_postfix = infix_to_postfix(orig_infix);
             if(orig_postfix != cur_postfix + ref_postfix + IMPL)
                 return false;
