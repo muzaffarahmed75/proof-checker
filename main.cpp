@@ -8,9 +8,11 @@
 #define OR 'V'
 #define NEG '~'
 #define IMPL '>'
+
 #define NONE 0
 #define UNARY 1
 #define BINARY 2
+
 #define PREMISE "P"
 #define AND_INTRO "^i"
 #define AND_ELIM_1 "^e1"
@@ -18,38 +20,48 @@
 #define OR_INTRO_1 "Vi1"
 #define OR_INTRO_2 "Vi2"
 #define IMPL_ELIM ">e"
-#define MOD_TOL "MT"
+#define MODUS_PON ">e"
+#define D_NEG_INTRO "~~i"
+#define D_NEG_ELIM "~~e"
+#define MODUS_TOL "MT"
+
 #define OK 0
 #define INVALID_RULE 1
 #define INVALID_LINE 2
 
 using namespace std;
 
+/** Represents a node in a rooted binary parse tree. */
 struct Node
 {
-    char data;
-    Node* left;
-    Node* right;
+    char data;      ///< Contents of the node (i.e. operand or operator)
+    Node* left;     ///< Reference to the left child of the node
+    Node* right;    ///< Reference to the right child of the node
 };
 
 typedef Node* parsetree;
 
+/** Structure for a typical proof line. */
 struct Line
 {
-    string statement;
-    string rule;
-    int line1;
-    int line2;
+    int number;         ///< Line number in the proof
+    string statement;   ///< The statement or formula
+    string rule;        ///< The proof rule used to arrive at that statement
+    int line1;          ///< The first line referred to by the proof rule
+    int line2;          ///< The second line referred to by the proof rule
+
+    /** Constructor initializes all variables to empty string or 0. */
     Line()
     {
         statement = rule = "";
-        line1 = line2 = 0;
+        number = line1 = line2 = 0;
     }
 };
 
-/** returns the type of an operator (unary, binary, or not an operator) */
+/** Returns the type of an operator (unary, binary, or none). */
 int operator_type(char token)
 {
+    // Compare token with known operators.
     switch(token)
     {
         case NEG:
@@ -61,127 +73,160 @@ int operator_type(char token)
         case IMPL:
             return BINARY;
     }
+
+    // If no match was found, return NONE.
     return NONE;
 }
 
-/** converts an infix expression to postfix */
+/** Returns the postfix form of an infix expression. */
 string infix_to_postfix(string infix)
 {
-    string postfix;
-    stack<char> st;
+    string postfix;     // String to store the postfix expression.
+    stack<char> st;     // Stack to store and pop operators based on priority.
+
+    // Iterate through the infix expression:
     for(auto token: infix)
     {
+        // If the token is an operator, push it onto the stack;
+        // if it's an operand, add it to postfix.
         if(operator_type(token))
             st.push(token);
         else
             postfix += token;
+
+        // Since unary operator has high priority, pop it as soon as it follows
+        // an operand/formula.
         if(operator_type(token) == UNARY)
             continue;
-        if(!st.empty() and operator_type(st.top()) == UNARY)
-        {
-            postfix += st.top();
-            st.pop();
-        }
+        while(!st.empty() and operator_type(st.top()) == UNARY)
+            postfix += st.top(), st.pop();
+
+        // If right bracket is found, pop it, pop and add all the following
+        // operators until but excluding left bracket.
         if(!st.empty() and st.top() == RIGHT)
         {
             st.pop();                           // pop right bracket
             while(st.top() != LEFT)
-            {
-                postfix += st.top();
-                st.pop();
-            }
+                postfix += st.top(), st.pop();
             st.pop();                           // pop left bracket
         }
     }
+
+    // Pop and add all the remaining operators from the stack to the postfix.
     while(!st.empty())
-    {
-        postfix += st.top();
-        st.pop();
-    }
+        postfix += st.top(), st.pop();
+
     return postfix;
 }
 
+
+/** Builds a rooted binary parse tree from an expression in postfix form
+    and returns the root of the parse tree. */
 parsetree postfix_to_parsetree(string postfix)
 {
-    stack<Node*> st;
+    stack<Node*> st;    // Stack to store roots of parse trees.
+
+    // Iterate through the postfix expression:
     for(auto token: postfix)
     {
+        // Create a new node to store the token in.
         Node* node = new Node();
-        if(token == NEG)
+        node -> data = token;
+
+        // If the token is not an operator, it has no children.
+        if(operator_type(token) == NONE)
         {
-            node -> data = token;
-            node -> right = st.top();
-            node -> left = NULL;
-            st.pop();
-            st.push(node);
-        }
-        else if(operator_type(token))
-        {
-            node -> data = token;
-            node -> right = st.top();
-            st.pop();
-            node -> left = st.top();
-            st.pop();
-            st.push(node);
-        }
-        else
-        {
-            node -> data = token;
             node -> right = NULL;
             node -> left = NULL;
-            st.push(node);
         }
+
+        // If the operator is unary, it has one child (to the right).
+        if(operator_type(token) == UNARY)
+        {
+            node -> right = st.top(), st.pop();
+            node -> left = NULL;
+        }
+
+        // If the operator is binary, it has two children.
+        if(operator_type(token) == BINARY)
+        {
+            node -> right = st.top(), st.pop();
+            node -> left = st.top(), st.pop();
+        }
+
+        // Push the node onto the stack after assigning it children.
+        st.push(node);
     }
+
+    // If the postfix expression was valid, there must be exactly one node
+    // in the stack after the iteration, i.e. the root of the parse tree.
     return st.top();
 }
 
+/** Returns the infix expression equivalent to the given parse tree. */
 string parsetree_to_infix(parsetree root)
 {
-    string infix = "";
+    string infix = "";  // String to store the infix expression.
+
+    // If the parse tree is empty, return an empty string.
     if(root == NULL)
         return infix;
+
     char token = root -> data;
+
+    // Add the infix of left child, the token and the infix of right child to
+    // infix. If operator is binary, enclose infix in left and right brakcets.
     if(operator_type(token) == BINARY)
-        infix += LEFT;
+        infix += LEFT;                              // add left bracket
     infix += parsetree_to_infix(root -> left);
     infix += token;
     infix += parsetree_to_infix(root -> right);
     if(operator_type(token) == BINARY)
-        infix += RIGHT;
+        infix += RIGHT;                             // add right bracket
+
     return infix;
 }
 
+
+/** Builds a rooted binary parse tree from an expression in infix form
+    and returns the root of the parse tree. */
 parsetree infix_to_parsetree(string infix)
 {
     return postfix_to_parsetree(infix_to_postfix(infix));
 }
 
+/** Returns the postfix expression equivalent to the given parse tree. */
 string parsetree_to_postfix(parsetree tree)
 {
     return infix_to_postfix(parsetree_to_infix(tree));
 }
 
-int check_line(Line line, int line_no)
+int check_line(Line line)
 {
     if(line.rule == PREMISE)
     {
         if(line.line1 or line.line2)
             return INVALID_LINE;
     }
-    else if(line.rule == AND_INTRO or line.rule == IMPL_ELIM
-        or line.rule == MOD_TOL)
+    else if(line.rule == AND_ELIM_1
+         or line.rule == AND_ELIM_2
+         or line.rule == OR_INTRO_1
+         or line.rule == OR_INTRO_2
+         or line.rule == D_NEG_ELIM
+         or line.rule == D_NEG_INTRO)
     {
-        if(line.line1 < 1 or line.line1 >= line_no)
-            return INVALID_LINE;
-        if(line.line2 < 1 or line.line2 >= line_no)
-            return INVALID_LINE;
-    }
-    else if(line.rule == AND_ELIM_1 or line.rule == AND_ELIM_2
-        or line.rule == OR_INTRO_1 or line.rule == OR_INTRO_2)
-    {
-        if(line.line1 < 1 or line.line1 >= line_no)
+        if(line.line1 < 1 or line.line1 >= line.number)
             return INVALID_LINE;
         if(line.line2)
+            return INVALID_LINE;
+    }
+    else if(line.rule == AND_INTRO
+         or line.rule == IMPL_ELIM
+         or line.rule == MODUS_TOL)
+    {
+        if(line.line1 < 1 or line.line1 >= line.number)
+            return INVALID_LINE;
+        if(line.line2 < 1 or line.line2 >= line.number)
             return INVALID_LINE;
     }
     else
@@ -192,8 +237,9 @@ int check_line(Line line, int line_no)
 Line input_line(int line_number)
 {
     Line line = Line();
+    line.number = line_number;
+    cout << line.number << " ";
     string in;
-    cout << line_number << " ";
     getline(cin, in);
     string::iterator c = in.begin();
     for(; c != in.end() and *c != '/'; ++c)
@@ -234,7 +280,7 @@ vector<Line> input_proof(int n)
         while(true)
         {
             line = input_line(i);
-            int res = check_line(line, i);
+            int res = check_line(line);
             if(res == OK)
                 break;
             else if(res == INVALID_RULE)
@@ -318,7 +364,25 @@ bool check_proof(vector<Line> proof)
             if(orig_postfix != ref_postfix + cur_postfix + IMPL)
                 return false;
         }
-        else if(line.rule == MOD_TOL)
+        else if(line.rule == D_NEG_ELIM)
+        {
+            string cur_infix = line.statement;
+            string ref_infix = proof[line.line1 - 1].statement;
+            string cur_postfix = infix_to_postfix(cur_infix);
+            string ref_postfix = infix_to_postfix(ref_infix);
+            if(ref_postfix != cur_postfix + NEG + NEG)
+                return false;
+        }
+        else if(line.rule == D_NEG_INTRO)
+        {
+            string cur_infix = line.statement;
+            string ref_infix = proof[line.line1 - 1].statement;
+            string cur_postfix = infix_to_postfix(cur_infix);
+            string ref_postfix = infix_to_postfix(ref_infix);
+            if(cur_postfix != ref_postfix + NEG + NEG)
+                return false;
+        }
+        else if(line.rule == MODUS_TOL)
         {
             string cur_infix = line.statement;
             string ref_infix = proof[line.line2 - 1].statement;
@@ -345,6 +409,9 @@ int main()
     cin >> n;
     cin.ignore();
     vector<Line> proof = input_proof(n);
-    cout << (check_proof(proof) ? "V" : "Inv") << "alid proof";
+    if(check_proof(proof))
+        cout << "Valid proof.";
+    else
+        cout << "Invalid proof.";
     return 0;
 }
