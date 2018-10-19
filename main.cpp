@@ -9,6 +9,7 @@
 #define NEG '~'
 #define IMPL '>'
 
+#define BRACE -1
 #define NONE 0
 #define UNARY 1
 #define BINARY 2
@@ -26,8 +27,9 @@
 #define MODUS_TOL "MT"
 
 #define OK 0
-#define INVALID_RULE 1
-#define INVALID_LINE 2
+#define INVALID_STATEMENT 1
+#define INVALID_RULE 2
+#define INVALID_LINE 3
 
 using namespace std;
 
@@ -64,10 +66,11 @@ int operator_type(char token)
     // Compare token with known operators.
     switch(token)
     {
-        case NEG:
-            return UNARY;
         case LEFT:
         case RIGHT:
+            return BRACE;
+        case NEG:
+            return UNARY;
         case AND:
         case OR:
         case IMPL:
@@ -89,7 +92,7 @@ string infix_to_postfix(string infix)
     {
         // If the token is an operator, push it onto the stack;
         // if it's an operand, add it to postfix.
-        if(operator_type(token))
+        if(operator_type(token) != NONE)
             st.push(token);
         else
             postfix += token;
@@ -160,6 +163,9 @@ parsetree postfix_to_parsetree(string postfix)
 
     // If the postfix expression was valid, there must be exactly one node
     // in the stack after the iteration, i.e. the root of the parse tree.
+    // If the postfix expression was blank, the stack will be empty.
+    if(st.empty())
+        return NULL;
     return st.top();
 }
 
@@ -201,8 +207,37 @@ string parsetree_to_postfix(parsetree tree)
     return infix_to_postfix(parsetree_to_infix(tree));
 }
 
+/** Returns the infix form of an postfix expression. */
+string postfix_to_infix(string postfix)
+{
+    return parsetree_to_infix(postfix_to_parsetree(postfix));
+}
+
+
+/** Checks if a given infix expression is valid and strictly paranthesized. */
+bool check_infix(string infix)
+{
+    // If number of left brackets is not the same as right, return false.
+    int bracket_count = 0;
+    for(auto token: infix)
+    {
+        if(token == LEFT)
+            bracket_count++;
+        if(token == RIGHT)
+            bracket_count--;
+    }
+    if(bracket_count)
+        return false;
+
+    // If the expression matches itself after converting to postfix and back,
+    // it is valid.
+    return infix == postfix_to_infix(infix_to_postfix(infix));
+}
+
 int check_line(Line line)
 {
+    if(check_infix(line.statement) == false)
+        return INVALID_STATEMENT;
     if(line.rule == PREMISE)
     {
         if(line.line1 or line.line2)
@@ -283,6 +318,8 @@ vector<Line> input_proof(int n)
             int res = check_line(line);
             if(res == OK)
                 break;
+            else if(res == INVALID_STATEMENT)
+                cerr << "Invalid statement." << endl;
             else if(res == INVALID_RULE)
                 cerr << "Invalid proof rule." << endl;
             else if(res == INVALID_LINE)
@@ -405,13 +442,16 @@ bool check_proof(vector<Line> proof)
 
 int main()
 {
-    int n;
+/*    int n;
     cin >> n;
     cin.ignore();
     vector<Line> proof = input_proof(n);
     if(check_proof(proof))
         cout << "Valid proof.";
     else
-        cout << "Invalid proof.";
+        cout << "Invalid proof.";*/
+    string s;
+    cin >> s;
+    cout << check_infix(s);
     return 0;
 }
