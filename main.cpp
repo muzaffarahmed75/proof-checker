@@ -2,34 +2,38 @@
 #include <stack>
 #include <vector>
 
-#define LEFT '('
-#define RIGHT ')'
-#define AND '^'
-#define OR 'V'
-#define NEG '~'
-#define IMPL '>'
+/* Operators */
+#define LEFT '('                ///< Left paranthesis
+#define RIGHT ')'               ///< Right paranthesis
+#define AND '^'                 ///< Logical AND
+#define OR 'V'                  ///< Logical OR
+#define NEG '~'                 ///< Logical NEGATION or Logical NOT
+#define IMPL '>'                ///< Logical IMPLICATION
 
-#define BRACE -1
-#define NONE 0
-#define UNARY 1
-#define BINARY 2
+/* Types of operators, return values for operator_type */
+#define BRACE -1                ///< Operator is a paranthesis
+#define NONE 0                  ///< Not an operator, i.e. operand
+#define UNARY 1                 ///< Operator is unary
+#define BINARY 2                ///< Operator is bianry
 
-#define PREMISE "P"
-#define AND_INTRO "^i"
-#define AND_ELIM_1 "^e1"
-#define AND_ELIM_2 "^e2"
-#define OR_INTRO_1 "Vi1"
-#define OR_INTRO_2 "Vi2"
-#define IMPL_ELIM ">e"
-#define MODUS_PON ">e"
-#define D_NEG_INTRO "~~i"
-#define D_NEG_ELIM "~~e"
-#define MODUS_TOL "MT"
+/* Proof rules */
+#define PREMISE "P"             ///< Premise
+#define AND_INTRO "^i"          ///< AND Introduction
+#define AND_ELIM_1 "^e1"        ///< AND Elimination 1
+#define AND_ELIM_2 "^e2"        ///< AND Elimination 2
+#define OR_INTRO_1 "Vi1"        ///< OR Introduction 1
+#define OR_INTRO_2 "Vi2"        ///< OR Introduction 2
+#define IMPL_ELIM ">e"          ///< IMPLICATION Elimination
+#define MODUS_PON ">e"          ///< Modus Ponens
+#define D_NEG_INTRO "~~i"       ///< Double NEGATION Introduction 
+#define D_NEG_ELIM "~~e"        ///< Double NEGATION Elimination
+#define MODUS_TOL "MT"          ///< Modus Tollens
 
-#define OK 0
-#define INVALID_STATEMENT 1
-#define INVALID_RULE 2
-#define INVALID_LINE 3
+/* Possible errors in input, return values for check_line */
+#define OK 0                    ///< Input is OK
+#define INVALID_STATEMENT 1     ///< The statement is invalid
+#define INVALID_RULE 2          ///< The rule is invalid
+#define INVALID_LINE 3          ///< The line(s) referenced is/are invalid
 
 using namespace std;
 
@@ -59,6 +63,19 @@ struct Line
         number = line1 = line2 = 0;
     }
 };
+
+
+/** Custom function for popping a stack while returning the top simultaneously.
+    Works for stacks of primitive data types only. */
+template<typename Type>
+Type pop(stack<Type>& st)
+{
+    if(st.empty())
+        return 0;
+    Type top = st.top();
+    st.pop();
+    return top;
+}
 
 /** Returns the type of an operator (unary, binary, or none). */
 int operator_type(char token)
@@ -101,10 +118,10 @@ string infix_to_postfix(string infix)
         // operators until but excluding left bracket.
         if(!st.empty() and st.top() == RIGHT)
         {
-            st.pop();                           // pop right bracket
+            pop(st);                            // pop right bracket
             while(st.top() != LEFT)
-                postfix += st.top(), st.pop();
-            st.pop();                           // pop left bracket
+                postfix += pop(st);
+            pop(st);                            // pop left bracket
         }
         
         // Since unary operator has high priority, pop it as soon as it follows
@@ -112,16 +129,15 @@ string infix_to_postfix(string infix)
         if(operator_type(token) == UNARY)
             continue;
         while(!st.empty() and operator_type(st.top()) == UNARY)
-            postfix += st.top(), st.pop();
+            postfix += pop(st);
     }
 
     // Pop and add all the remaining operators from the stack to the postfix.
     while(!st.empty())
-        postfix += st.top(), st.pop();
+        postfix += pop(st);
 
     return postfix;
 }
-
 
 /** Builds a rooted binary parse tree from an expression in postfix form
     and returns the root of the parse tree. */
@@ -146,15 +162,15 @@ parsetree postfix_to_parsetree(string postfix)
         // If the operator is unary, it has one child (to the right).
         if(operator_type(token) == UNARY)
         {
-            node -> right = st.top(), st.pop();
+            node -> right = pop(st);
             node -> left = NULL;
         }
 
         // If the operator is binary, it has two children.
         if(operator_type(token) == BINARY)
         {
-            node -> right = st.top(), st.pop();
-            node -> left = st.top(), st.pop();
+            node -> right = pop(st);
+            node -> left = pop(st);
         }
 
         // Push the node onto the stack after assigning it children.
@@ -212,7 +228,6 @@ string postfix_to_infix(string postfix)
     return parsetree_to_infix(postfix_to_parsetree(postfix));
 }
 
-
 /** Checks if a given infix expression is valid and strictly paranthesized. */
 bool check_infix(string infix)
 {
@@ -232,7 +247,6 @@ bool check_infix(string infix)
     // it is valid.
     return infix == postfix_to_infix(infix_to_postfix(infix));
 }
-
 
 /** Checks if a line is valid. Returns the error if invalid, OK otherwise. */
 int check_line(Line line)
@@ -372,10 +386,14 @@ vector<Line> input_proof(int n)
     return proof;
 }
 
+/** Checks if a proof is valid. Returns true if it is, false otherwise.*/
 bool check_proof(vector<Line> proof)
 {
+    // Iterate through the proof:
     for(auto line: proof)
     {
+        // Check what rule was used to arrive at the current line. Then check
+        // if the rule was used correctly. If it wasn't, return false.
         if(line.rule == PREMISE);
         else if(line.rule == AND_INTRO)
         {
@@ -484,18 +502,13 @@ bool check_proof(vector<Line> proof)
 
 int main()
 {
-/*    int n;
+    int n;
     cin >> n;
     cin.ignore();
     vector<Line> proof = input_proof(n);
     if(check_proof(proof))
         cout << "Valid proof.";
     else
-        cout << "Invalid proof.";*/
-    string s;
-    cin >> s;
-    cout << infix_to_postfix(s) << endl;
-    cout << postfix_to_infix(infix_to_postfix(s)) << endl;
-    cout << check_infix(s);
+        cout << "Invalid proof.";
     return 0;
 }
