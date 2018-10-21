@@ -24,7 +24,7 @@
 #define OR_INTRO_1 "Vi1"        ///< OR Introduction 1
 #define OR_INTRO_2 "Vi2"        ///< OR Introduction 2
 #define IMPL_ELIM ">e"          ///< IMPLICATION Elimination
-#define MODUS_PON ">e"          ///< Modus Ponens
+#define MODUS_PON "MP"          ///< Modus Ponens
 #define D_NEG_INTRO "~~i"       ///< Double NEGATION Introduction 
 #define D_NEG_ELIM "~~e"        ///< Double NEGATION Elimination
 #define MODUS_TOL "MT"          ///< Modus Tollens
@@ -63,7 +63,6 @@ struct Line
         number = line1 = line2 = 0;
     }
 };
-
 
 /** Custom function for popping a stack while returning the top simultaneously.
     Works for stacks of primitive data types only. */
@@ -108,13 +107,13 @@ string infix_to_postfix(string infix)
     for(auto token: infix)
     {
         // If the token is an operator, push it onto the stack;
-        // if it's an operand, add it to postfix.
+        // if it's an operand, append it to postfix.
         if(operator_type(token) != NONE)
             st.push(token);
         else
             postfix += token;
 
-        // If right bracket is found, pop it, pop and add all the following
+        // If right bracket is found, pop it. Pop and append all the following
         // operators until but excluding left bracket.
         if(!st.empty() and st.top() == RIGHT)
         {
@@ -132,7 +131,7 @@ string infix_to_postfix(string infix)
             postfix += pop(st);
     }
 
-    // Pop and add all the remaining operators from the stack to the postfix.
+    // Pop and append all the remaining operators from the stack to postfix.
     while(!st.empty())
         postfix += pop(st);
 
@@ -196,15 +195,15 @@ string parsetree_to_infix(parsetree root)
 
     char token = root -> data;
 
-    // Add the infix of left child, the token and the infix of right child to
-    // infix. If operator is binary, enclose infix in left and right brakcets.
+    // Append the infix of left child, the token and the infix of right child
+    // to infix. If operator is binary, enclose infix in parantheses.
     if(operator_type(token) == BINARY)
-        infix += LEFT;                              // add left bracket
+        infix += LEFT;                              // append left bracket
     infix += parsetree_to_infix(root -> left);
     infix += token;
     infix += parsetree_to_infix(root -> right);
     if(operator_type(token) == BINARY)
-        infix += RIGHT;                             // add right bracket
+        infix += RIGHT;                             // append right bracket
 
     return infix;
 }
@@ -315,8 +314,8 @@ Line input_line(int line_number)
     for(; c != in.end() and *c != '/'; ++c)
         if(*c != ' ')
             line.statement += *c;
-    if(c != in.end())                   // Move past the '/'
-        c++;
+    if(c != in.end())
+        c++;                            // Move past the '/'
 
     // Add characters to line.rule until '/' is encountered.
     for(; c != in.end() and *c != '/'; ++c)
@@ -352,11 +351,11 @@ Line input_line(int line_number)
     return line;
 }
 
-/** Takes a typical proof as input as input, stores individial lines in a
-    vector and returns it. */
+/** Takes a typical proof as input, stores individial lines in a vector and
+    returns it. */
 vector<Line> input_proof(int n)
 {
-    vector<Line> proof;                 // Vector to store the proof.
+    vector<Line> proof;                 // A vector to store the proof.
 
     // Loop to take n lines of input.
     for(int i = 1; i <= n; i++)
@@ -386,13 +385,13 @@ vector<Line> input_proof(int n)
     return proof;
 }
 
-/** Checks if a proof is valid. Returns true if it is, false otherwise.*/
+/** Checks if a proof is valid. Returns true if it is, false otherwise. */
 bool check_proof(vector<Line> proof)
 {
     // Iterate through the proof:
     for(auto line: proof)
     {
-        // Check what rule was used to arrive at the current line. Then check
+        // Check what rule was used to arrive at the current line, then check
         // if the rule was used correctly. If it wasn't, return false.
         if(line.rule == PREMISE);
         else if(line.rule == AND_INTRO)
@@ -450,7 +449,7 @@ bool check_proof(vector<Line> proof)
             if(right_infix != ref_infix)
                 return false;
         }
-        else if(line.rule == IMPL_ELIM)
+        else if(line.rule == IMPL_ELIM or line.rule == MODUS_PON)
         {
             string cur_infix = line.statement;
             string ref_infix = proof[line.line2 - 1].statement;
