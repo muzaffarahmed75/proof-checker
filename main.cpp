@@ -35,8 +35,6 @@
 #define INVALID_RULE 2          ///< The rule is invalid
 #define INVALID_LINE 3          ///< The line(s) referenced is/are invalid
 
-using namespace std;
-
 /** Represents a node in a rooted binary parse tree. */
 struct Node
 {
@@ -46,13 +44,14 @@ struct Node
 };
 
 typedef Node* parsetree;
+typedef std::string str;
 
 /** Structure for a typical proof line. */
 struct Line
 {
     int number;         ///< Line number in the proof
-    string statement;   ///< The statement or formula
-    string rule;        ///< The proof rule used to arrive at that statement
+    str statement;      ///< The statement or formula
+    str rule;           ///< The proof rule used to arrive at that statement
     int line1;          ///< The first line referred to by the proof rule
     int line2;          ///< The second line referred to by the proof rule
 
@@ -67,7 +66,7 @@ struct Line
 /** Custom function for popping a stack while returning the top simultaneously.
     Works for stacks of primitive data types only. */
 template<typename Type>
-Type pop(stack<Type>& st)
+Type pop(std::stack<Type>& st)
 {
     if(st.empty())
         return 0;
@@ -98,10 +97,10 @@ int operator_type(char token)
 }
 
 /** Returns the postfix form of an infix expression. */
-string infix_to_postfix(string infix)
+str infix_to_postfix(str infix)
 {
-    string postfix;     // String to store the postfix expression.
-    stack<char> st;     // Stack to store and pop operators based on priority.
+    str postfix;         // String to store the postfix expression.
+    std::stack<char> st; // Stack to store and pop operators based on priority.
 
     // Iterate through the infix expression:
     for(auto token: infix)
@@ -140,9 +139,9 @@ string infix_to_postfix(string infix)
 
 /** Builds a rooted binary parse tree from an expression in postfix form
     and returns the root of the parse tree. */
-parsetree postfix_to_parsetree(string postfix)
+parsetree postfix_to_parsetree(str postfix)
 {
-    stack<Node*> st;    // Stack to store roots of parse trees.
+    std::stack<Node*> st;       // Stack to store roots of parse trees.
 
     // Iterate through the postfix expression:
     for(auto token: postfix)
@@ -185,9 +184,9 @@ parsetree postfix_to_parsetree(string postfix)
 }
 
 /** Returns the infix expression equivalent to the given parse tree. */
-string parsetree_to_infix(parsetree root)
+str parsetree_to_infix(parsetree root)
 {
-    string infix = "";  // String to store the infix expression.
+    str infix = "";  // String to store the infix expression.
 
     // If the parse tree is empty, return an empty string.
     if(root == NULL)
@@ -210,25 +209,25 @@ string parsetree_to_infix(parsetree root)
 
 /** Builds a rooted binary parse tree from an expression in infix form
     and returns the root of the parse tree. */
-parsetree infix_to_parsetree(string infix)
+parsetree infix_to_parsetree(str infix)
 {
     return postfix_to_parsetree(infix_to_postfix(infix));
 }
 
 /** Returns the postfix expression equivalent to the given parse tree. */
-string parsetree_to_postfix(parsetree tree)
+str parsetree_to_postfix(parsetree tree)
 {
     return infix_to_postfix(parsetree_to_infix(tree));
 }
 
 /** Returns the infix form of an postfix expression. */
-string postfix_to_infix(string postfix)
+str postfix_to_infix(str postfix)
 {
     return parsetree_to_infix(postfix_to_parsetree(postfix));
 }
 
 /** Checks if a given infix expression is valid and strictly paranthesized. */
-bool check_infix(string infix)
+bool check_infix(str infix)
 {
     // If number of left brackets is not the same as right, return false.
     int bracket_count = 0;
@@ -303,12 +302,12 @@ Line input_line(int line_number)
 {
     Line line = Line();                 // Object to store the line.
     line.number = line_number;          // Store the proof line number.
-    cout << line.number << " ";         // Prompt for input.
-    string in;
-    getline(cin, in);
+    std::cout << line.number << " ";    // Prompt for input.
+    str in;
+    getline(std::cin, in);
 
     // Iterate through the string:
-    string::iterator c = in.begin();
+    str::iterator c = in.begin();
 
     // Add characters to line.statement until '/' is encountered.
     for(; c != in.end() and *c != '/'; ++c)
@@ -353,9 +352,9 @@ Line input_line(int line_number)
 
 /** Takes a typical proof as input, stores individial lines in a vector and
     returns it. */
-vector<Line> input_proof(int n)
+std::vector<Line> input_proof(int n)
 {
-    vector<Line> proof;                 // A vector to store the proof.
+    std::vector<Line> proof;            // A vector to store the proof.
 
     // Loop to take n lines of input.
     for(int i = 1; i <= n; i++)
@@ -371,11 +370,11 @@ vector<Line> input_proof(int n)
             if(res == OK)
                 break;
             else if(res == INVALID_STATEMENT)
-                cerr << "Invalid statement." << endl;
+                std::cerr << "Invalid statement." << std::endl;
             else if(res == INVALID_RULE)
-                cerr << "Invalid proof rule." << endl;
+                std::cerr << "Invalid proof rule." << std::endl;
             else if(res == INVALID_LINE)
-                cerr << "Invalid line number(s)." << endl;
+                std::cerr << "Invalid line number(s)." << std::endl;
         }
 
         // Add the line to proof.
@@ -386,7 +385,7 @@ vector<Line> input_proof(int n)
 }
 
 /** Checks if a proof is valid. Returns true if it is, false otherwise. */
-bool check_proof(vector<Line> proof)
+bool check_proof(std::vector<Line> proof)
 {
     // Iterate through the proof:
     for(auto line: proof)
@@ -396,102 +395,102 @@ bool check_proof(vector<Line> proof)
         if(line.rule == PREMISE);
         else if(line.rule == AND_INTRO)
         {
-            string cur_postfix = infix_to_postfix(line.statement);
-            string left_infix = proof[line.line1 - 1].statement;
-            string right_infix = proof[line.line2 - 1].statement;
-            string left_postfix = infix_to_postfix(left_infix);
-            string right_postfix = infix_to_postfix(right_infix);
-            string full_postfix = left_postfix + right_postfix + AND;
+            str cur_postfix = infix_to_postfix(line.statement);
+            str left_infix = proof[line.line1 - 1].statement;
+            str right_infix = proof[line.line2 - 1].statement;
+            str left_postfix = infix_to_postfix(left_infix);
+            str right_postfix = infix_to_postfix(right_infix);
+            str full_postfix = left_postfix + right_postfix + AND;
             if(cur_postfix != full_postfix)
                 return false;
         }
         else if(line.rule == AND_ELIM_1)
         {
-            string cur_infix = line.statement;
-            string parent_infix = proof[line.line1 - 1].statement;
+            str cur_infix = line.statement;
+            str parent_infix = proof[line.line1 - 1].statement;
             parsetree parent_tree = infix_to_parsetree(parent_infix);
             if(parent_tree -> data != AND)
                 return false;
-            string left_infix = parsetree_to_infix(parent_tree -> left);
+            str left_infix = parsetree_to_infix(parent_tree -> left);
             if(left_infix != cur_infix)
                 return false;
         }
         else if(line.rule == AND_ELIM_2)
         {
-            string cur_infix = line.statement;
-            string parent_infix = proof[line.line1 - 1].statement;
+            str cur_infix = line.statement;
+            str parent_infix = proof[line.line1 - 1].statement;
             parsetree parent_tree = infix_to_parsetree(parent_infix);
             if(parent_tree -> data != AND)
                 return false;
-            string right_infix = parsetree_to_infix(parent_tree -> right);
+            str right_infix = parsetree_to_infix(parent_tree -> right);
             if(right_infix != cur_infix)
                 return false;
         }
         else if(line.rule == OR_INTRO_1)
         {
-            string cur_infix = line.statement;
+            str cur_infix = line.statement;
             parsetree cur_tree = infix_to_parsetree(cur_infix);
             if(cur_tree -> data != OR)
                 return false;
-            string left_infix = parsetree_to_infix(cur_tree -> left);
-            string ref_infix = proof[line.line1 - 1].statement;
+            str left_infix = parsetree_to_infix(cur_tree -> left);
+            str ref_infix = proof[line.line1 - 1].statement;
             if(left_infix != ref_infix)
                 return false;
         }
         else if(line.rule == OR_INTRO_2)
         {
-            string cur_infix = line.statement;
+            str cur_infix = line.statement;
             parsetree cur_tree = infix_to_parsetree(cur_infix);
             if(cur_tree -> data != OR)
                 return false;
-            string right_infix = parsetree_to_infix(cur_tree -> right);
-            string ref_infix = proof[line.line1 - 1].statement;
+            str right_infix = parsetree_to_infix(cur_tree -> right);
+            str ref_infix = proof[line.line1 - 1].statement;
             if(right_infix != ref_infix)
                 return false;
         }
         else if(line.rule == IMPL_ELIM or line.rule == MODUS_PON)
         {
-            string cur_infix = line.statement;
-            string ref_infix = proof[line.line2 - 1].statement;
-            string orig_infix = proof[line.line1 - 1].statement;
-            string ref_postfix = infix_to_postfix(ref_infix);
-            string cur_postfix = infix_to_postfix(cur_infix);
-            string orig_postfix = infix_to_postfix(orig_infix);
+            str cur_infix = line.statement;
+            str ref_infix = proof[line.line2 - 1].statement;
+            str orig_infix = proof[line.line1 - 1].statement;
+            str ref_postfix = infix_to_postfix(ref_infix);
+            str cur_postfix = infix_to_postfix(cur_infix);
+            str orig_postfix = infix_to_postfix(orig_infix);
             if(orig_postfix != ref_postfix + cur_postfix + IMPL)
                 return false;
         }
         else if(line.rule == D_NEG_ELIM)
         {
-            string cur_infix = line.statement;
-            string ref_infix = proof[line.line1 - 1].statement;
-            string cur_postfix = infix_to_postfix(cur_infix);
-            string ref_postfix = infix_to_postfix(ref_infix);
+            str cur_infix = line.statement;
+            str ref_infix = proof[line.line1 - 1].statement;
+            str cur_postfix = infix_to_postfix(cur_infix);
+            str ref_postfix = infix_to_postfix(ref_infix);
             if(ref_postfix != cur_postfix + NEG + NEG)
                 return false;
         }
         else if(line.rule == D_NEG_INTRO)
         {
-            string cur_infix = line.statement;
-            string ref_infix = proof[line.line1 - 1].statement;
-            string cur_postfix = infix_to_postfix(cur_infix);
-            string ref_postfix = infix_to_postfix(ref_infix);
+            str cur_infix = line.statement;
+            str ref_infix = proof[line.line1 - 1].statement;
+            str cur_postfix = infix_to_postfix(cur_infix);
+            str ref_postfix = infix_to_postfix(ref_infix);
             if(cur_postfix != ref_postfix + NEG + NEG)
                 return false;
         }
         else if(line.rule == MODUS_TOL)
         {
-            string cur_infix = line.statement;
-            string ref_infix = proof[line.line2 - 1].statement;
-            string orig_infix = proof[line.line1 - 1].statement;
+            str cur_infix = line.statement;
+            str ref_infix = proof[line.line2 - 1].statement;
+            str orig_infix = proof[line.line1 - 1].statement;
             parsetree cur_tree = infix_to_parsetree(cur_infix);
             parsetree ref_tree = infix_to_parsetree(ref_infix);
             if(cur_tree -> data != NEG or ref_tree -> data != NEG)
                 return false;
             cur_tree = cur_tree -> right;
             ref_tree = ref_tree -> right;
-            string cur_postfix = parsetree_to_postfix(cur_tree);
-            string ref_postfix = parsetree_to_postfix(ref_tree);
-            string orig_postfix = infix_to_postfix(orig_infix);
+            str cur_postfix = parsetree_to_postfix(cur_tree);
+            str ref_postfix = parsetree_to_postfix(ref_tree);
+            str orig_postfix = infix_to_postfix(orig_infix);
             if(orig_postfix != cur_postfix + ref_postfix + IMPL)
                 return false;
         }
@@ -502,12 +501,14 @@ bool check_proof(vector<Line> proof)
 int main()
 {
     int n;
-    cin >> n;
-    cin.ignore();
-    vector<Line> proof = input_proof(n);
+    std::cout << "Enter the number of lines in the proof: ";
+    std::cin >> n;
+    std::cin.ignore();
+    std::vector<Line> proof = input_proof(n);
     if(check_proof(proof))
-        cout << "Valid proof.";
+        std::cout << "Valid proof.";
     else
-        cout << "Invalid proof.";
+        std::cout << "Invalid proof.";
+    std::cout << std::endl;
     return 0;
 }
