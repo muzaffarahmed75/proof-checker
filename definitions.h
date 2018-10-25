@@ -74,3 +74,13 @@ Type pop(std::stack<Type>& st)
     st.pop();
     return top;
 }
+
+/** Post-order traversal to free the memory used by the given parsetree. */
+void erase(parsetree tree)
+{
+    if(tree == NULL)
+        return;
+    erase(tree -> left);
+    erase(tree -> right);
+    free(tree);
+}

@@ -146,5 +146,8 @@ str parsetree_to_postfix(parsetree tree)
 /** Returns the infix form of an postfix expression. */
 str postfix_to_infix(str postfix)
 {
-    return parsetree_to_infix(postfix_to_parsetree(postfix));
+    parsetree tree = postfix_to_parsetree(postfix);
+    str infix = parsetree_to_infix(tree);
+    erase(tree);
+    return infix;
 }
